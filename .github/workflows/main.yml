@@ -25,6 +25,7 @@ jobs:
           client-id: 53c32feb-5c6d-4f96-99cc-c9c7c7fc2cc1
           tenant-id: dcac7e0b-5007-4b90-8f3b-39d5d2289aa1
           subscription-id: d6abefe9-d8b8-4f4c-880b-1c7f6992b04d
+          enable-AzPSSession: true
 
       - name: Azure Bicep Deploy   
         working-directory: .github/workflows/
