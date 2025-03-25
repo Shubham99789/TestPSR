@@ -1,10 +1,12 @@
-name: Deployment (Create)
+ name: Deployment (Create)
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+  schedule:
+    - cron: "0 */3 * * *"  # This will run the workflow every 3 hours
 
 permissions:
   contents: read
@@ -25,10 +27,8 @@ jobs:
           client-id: 29584f4e-65fe-41f3-9e1a-4d0f32bf224d
           tenant-id: dcac7e0b-5007-4b90-8f3b-39d5d2289aa1
           subscription-id: d6abefe9-d8b8-4f4c-880b-1c7f6992b04d
-          enable-AzPSSession: true
 
       - name: Azure Bicep Deploy   
         working-directory: .github/workflows/
         run: |
             az deployment group create --resource-group NVMT-ISID-EK1-RGP-Recovery-Vault --template-file Bicep_Shell-392-SCH-Daily_O365_Usage_Location.bicep
-
