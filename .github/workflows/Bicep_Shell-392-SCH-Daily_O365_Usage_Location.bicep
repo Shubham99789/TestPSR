@@ -1,4 +1,4 @@
-param workflows_Shell_392_SCH_Daily_O365_Usage_Location_name string = 'Shell-392-SCH-Daily_O365_Usage_Location'
+param workflows_Shell_392_SCH_Daily_O365_Usage_Location_name string = 'Bicep_Shell-392-SCH-Daily_O365_Usage_Location'
 param connections_keyvault_externalid string = '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/resourceGroups/NVMT-ISID-EK1-RGP-Recovery-Vault/providers/Microsoft.Web/connections/keyvault'
 
 resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Microsoft.Logic/workflows@2017-07-01' = {
