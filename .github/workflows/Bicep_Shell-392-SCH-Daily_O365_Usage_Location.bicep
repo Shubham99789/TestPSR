@@ -1,5 +1,4 @@
-param workflows_Shell_392_SCH_Daily_O365_Usage_Location_name string = 'Bicep_Shell-392-SCH-Daily_O365_Usage_Location'
-param connections_sharepointonline_3_externalid string = '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/resourceGroups/NVMT-ISID-EK1-RGP-Recovery-Vault/providers/Microsoft.Web/connections/sharepointonline-3'
+ param workflows_Shell_392_SCH_Daily_O365_Usage_Location_name string = 'Shell-392-SCH-Daily_O365_Usage_Location'
 param connections_keyvault_externalid string = '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/resourceGroups/NVMT-ISID-EK1-RGP-Recovery-Vault/providers/Microsoft.Web/connections/keyvault'
 
 resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Microsoft.Logic/workflows@2017-07-01' = {
@@ -54,7 +53,7 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
         }
         CountryHashTable: {
           runAfter: {
-            Get_secret: [
+            'FileName-MissingCountryList': [
               'Succeeded'
             ]
           }
@@ -356,6 +355,7 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
                       country: 'Netherlands'
                       usageLocation: 'NL'
                       displayName: '@items(\'For_Each_1\')?[\'displayName\']'
+                      status: 'Success'
                     }
                   }
                 }
@@ -390,12 +390,6 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
                       '@null'
                     ]
                   }
-                  {
-                    equals: [
-                      '@not(contains(variables(\'CountryHashTable\'),coalesce(items(\'For_Each_1\')?[\'country\'],\'\')))'
-                      '@true'
-                    ]
-                  }
                 ]
               }
               type: 'If'
@@ -421,7 +415,7 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
           }
           type: 'Http'
           inputs: {
-            uri: 'https://graph.microsoft.com/v1.0/groups/dc3aa4bf-98a2-4cab-a195-c8cc7ad73db2/members?&$filter= @{variables(\'usageLocation eq null_Variable\')}&$count=true&$select=userPrincipalName,displayName,country,usageLocation,id'
+            uri: 'https://graph.microsoft.com/v1.0/users?&$filter= @{variables(\'usageLocation eq null_Variable\')}&$count=true&$select=userPrincipalName,displayName,country,usageLocation,id'
             method: 'GET'
             headers: {
               ConsistencyLevel: 'eventual'
@@ -433,6 +427,11 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
               clientId: '@{variables(\'ClientId\')}'
               pfx: '@{body(\'Get_secret\')?[\'value\']}'
               password: '@{null}'
+            }
+          }
+          runtimeConfiguration: {
+            paginationPolicy: {
+              minimumItemCount: 100000
             }
           }
         }
@@ -598,34 +597,6 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
             }
           }
         }
-        'Create_file_-_Userlist_csv': {
-          runAfter: {
-            'Create_CSV_table_-_Userlist': [
-              'Succeeded'
-            ]
-          }
-          type: 'ApiConnection'
-          inputs: {
-            host: {
-              connection: {
-                name: '@parameters(\'$connections\')[\'sharepointonline\'][\'connectionId\']'
-              }
-            }
-            method: 'post'
-            body: '@body(\'Create_CSV_table_-_Userlist\')'
-            path: '/datasets/@{encodeURIComponent(encodeURIComponent(\'https://shellnovmot.sharepoint.com/sites/PSRTenantAdminScripts\'))}/files'
-            queries: {
-              folderPath: '/Shell392SCHDaily_O365_Usage_Location/data'
-              name: 'userlist_@{utcNow(\'dd/MM/yyyy hh:mm tt\')}.csv'
-              queryParametersSingleEncoded: true
-            }
-          }
-          runtimeConfiguration: {
-            contentTransfer: {
-              transferMode: 'Chunked'
-            }
-          }
-        }
         'Create_CSV_table_-_MissingCountryUserList': {
           runAfter: {
             For_Each_1: [
@@ -640,7 +611,7 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
         }
         _UpdateUsersToNL: {
           runAfter: {
-            'Create_file_-_Userlist_csv': [
+            'HTTP-Create_UserList_csv': [
               'Succeeded'
             ]
           }
@@ -680,16 +651,19 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
             }
           }
         }
-        HTTP: {
+        'HTTP-MissingCountryUserList_csv': {
           runAfter: {
-            FileName: [
+            'Create_CSV_table_-_MissingCountryUserList': [
               'Succeeded'
             ]
           }
           type: 'Http'
           inputs: {
-            uri: 'https://graph.microsoft.com/v1.0/sites/@{variables(\'SiteId\')}/drives/@{variables(\'DriveId\')}/O365 Reports/${workflows_Shell_392_SCH_Daily_O365_Usage_Location_name}/data/@{variables(\'FileName\')}:/content'
+            uri: ' https://graph.microsoft.com/v1.0/sites/@{variables(\'SiteId\')}/drives/@{variables(\'DriveId\')}/root:/data/@{variables(\' FileName-MissingCountryList\')}:/content'
             method: 'PUT'
+            headers: {
+              'Content-Type': 'binary/octet-stream'
+            }
             body: '@string(body(\'Create_CSV_table_-_MissingCountryUserList\'))'
             authentication: {
               type: 'ActiveDirectoryOAuth'
@@ -706,9 +680,38 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
             }
           }
         }
+        'HTTP-Create_UserList_csv': {
+          runAfter: {
+            'Create_CSV_table_-_Userlist': [
+              'Succeeded'
+            ]
+          }
+          type: 'Http'
+          inputs: {
+            uri: ' https://graph.microsoft.com/v1.0/sites/@{variables(\'SiteId\')}/drives/@{variables(\'DriveId\')}/root:/data/@{variables(\'FileName-UserList\')}:/content'
+            method: 'PUT'
+            headers: {
+              'Content-Type': 'binary/octet-stream'
+            }
+            body: '@string(body(\'Create_CSV_table_-_Userlist\'))'
+            authentication: {
+              type: 'ActiveDirectoryOAuth'
+              tenant: '@{variables(\'TenantId\')}'
+              audience: 'https://graph.microsoft.com/'
+              clientId: '@{variables(\'ClientId\')}'
+              pfx: '@{body(\'Get_secret\')?[\'value\']}'
+              password: '@{null}'
+            }
+          }
+          runtimeConfiguration: {
+            contentTransfer: {
+              transferMode: 'Chunked'
+            }
+          }
+        }
         _SiteId: {
           runAfter: {
-            'Create_CSV_table_-_MissingCountryUserList': [
+            Get_secret: [
               'Succeeded'
             ]
           }
@@ -735,12 +738,29 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
               {
                 name: 'DriveId'
                 type: 'string'
-                value: 'b!UcrFpZCr80mxIuY0GbyKVbALHkHU2nRGl_Q457XgiwLc-iVLIH7fRJpar6BeROgX'
+                value: 'b!UcrFpZCr80mxIuY0GbyKVbALHkHU2nRGl_Q457XgiwJN83ySWvRmToXgAUcbJ1Nv'
               }
             ]
           }
         }
-        FileName: {
+        'FileName-MissingCountryList': {
+          runAfter: {
+            'FileName-UserList': [
+              'Succeeded'
+            ]
+          }
+          type: 'InitializeVariable'
+          inputs: {
+            variables: [
+              {
+                name: ' FileName-MissingCountryList'
+                type: 'string'
+                value: 'MissingCountryUserList_@{utcNow(\'yyyy-MMM-dd-hh-mmtt\')}.csv'
+              }
+            ]
+          }
+        }
+        'FileName-UserList': {
           runAfter: {
             DriveId: [
               'Succeeded'
@@ -750,50 +770,11 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
           inputs: {
             variables: [
               {
-                name: 'FileName'
+                name: 'FileName-UserList'
                 type: 'string'
-                value: 'MissingCountryUserList_@{utcNow(\'dd/MM/yyyy hh:mm tt\')}.csv'
+                value: 'UserList_@{utcNow(\'yyyy-MMM-dd-hh-mmtt\')}.csv'
               }
             ]
-          }
-        }
-        Terminate: {
-          runAfter: {
-            HTTP: [
-              'Succeeded'
-            ]
-          }
-          type: 'Terminate'
-          inputs: {
-            runStatus: 'Failed'
-          }
-        }
-        'Create_file_-_MissingCountryUserList_csv': {
-          runAfter: {
-            Terminate: [
-              'Succeeded'
-            ]
-          }
-          type: 'ApiConnection'
-          inputs: {
-            host: {
-              connection: {
-                name: '@parameters(\'$connections\')[\'sharepointonline\'][\'connectionId\']'
-              }
-            }
-            method: 'post'
-            body: '@body(\'Create_CSV_table_-_MissingCountryUserList\')'
-            path: '/datasets/@{encodeURIComponent(encodeURIComponent(\'https://shellnovmot.sharepoint.com/sites/PSRTenantAdminScripts\'))}/files'
-            queries: {
-              folderPath: '/Shell392SCHDaily_O365_Usage_Location/data'
-              name: 'MissingCountryUserList_@{utcNow(\'dd/MM/yyyy hh:mm tt\')}.csv'
-              queryParametersSingleEncoded: true
-            }
-          }
-          runtimeConfiguration: {
-            contentTransfer: {
-              transferMode: 'Chunked'
-            }
           }
         }
       }
@@ -802,11 +783,6 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
     parameters: {
       '$connections': {
         value: {
-          sharepointonline: {
-            id: '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/providers/Microsoft.Web/locations/northcentralus/managedApis/sharepointonline'
-            connectionId: connections_sharepointonline_3_externalid
-            connectionName: 'sharepointonline-3'
-          }
           keyvault: {
             id: '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/providers/Microsoft.Web/locations/northcentralus/managedApis/keyvault'
             connectionId: connections_keyvault_externalid
