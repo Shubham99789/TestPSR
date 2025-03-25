@@ -1,11 +1,15 @@
-param workflows_Shell_392_SCH_Daily_O365_Usage_Location_name string = 'Bicep_Shell-392-SCH-Daily_O365_Usage_Location'
-param connections_keyvault_externalid string = '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/resourceGroups/NVMT-ISID-EK1-RGP-Recovery-Vault/providers/Microsoft.Web/connections/keyvault'
+ param workflows_Shell_392_SCH_Daily_O365_Usage_Location_name string = 'Shell-392-SCH-Daily_O365_Usage_Location'
+param connections_keyvault_5_externalid string = '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/resourceGroups/NVMT-ISID-EK1-RGP-Recovery-Vault/providers/Microsoft.Web/connections/keyvault-5'
+param userAssignedIdentities_PSR_UAMI_externalid string = '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/resourceGroups/NVMT-ISID-EK1-RGP-Recovery-Vault/providers/Microsoft.ManagedIdentity/userAssignedIdentities/PSR-UAMI'
 
 resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Microsoft.Logic/workflows@2017-07-01' = {
   name: workflows_Shell_392_SCH_Daily_O365_Usage_Location_name
   location: 'northcentralus'
   identity: {
-    type: 'SystemAssigned'
+    type: 'SystemAssigned, UserAssigned'
+    userAssignedIdentities: {
+      '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/resourceGroups/NVMT-ISID-EK1-RGP-Recovery-Vault/providers/Microsoft.ManagedIdentity/userAssignedIdentities/PSR-UAMI': {}
+    }
   }
   properties: {
     state: 'Enabled'
@@ -636,7 +640,7 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
           inputs: {
             host: {
               connection: {
-                name: '@parameters(\'$connections\')[\'keyvault\'][\'connectionId\']'
+                name: '@parameters(\'$connections\')[\'keyvault-2\'][\'connectionId\']'
               }
             }
             method: 'get'
@@ -783,10 +787,16 @@ resource workflows_Shell_392_SCH_Daily_O365_Usage_Location_name_resource 'Micros
     parameters: {
       '$connections': {
         value: {
-          keyvault: {
+          'keyvault-2': {
             id: '/subscriptions/d6abefe9-d8b8-4f4c-880b-1c7f6992b04d/providers/Microsoft.Web/locations/northcentralus/managedApis/keyvault'
-            connectionId: connections_keyvault_externalid
-            connectionName: 'keyvault'
+            connectionId: connections_keyvault_5_externalid
+            connectionName: 'keyvault-5'
+            connectionProperties: {
+              authentication: {
+                type: 'ManagedServiceIdentity'
+                identity: userAssignedIdentities_PSR_UAMI_externalid
+              }
+            }
           }
         }
       }
