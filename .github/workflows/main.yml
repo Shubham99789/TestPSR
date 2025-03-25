@@ -1,13 +1,11 @@
- name: Deployment (Create)
+name: Deployment (Create)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
-  schedule:
-    - cron: "0 */3 * * *"  # This will run the workflow every 3 hours
-
+      - main 
+ 
 permissions:
   contents: read
   id-token: write
